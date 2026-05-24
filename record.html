@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>🍥 soft time</title>
+  <!-- Chart.js for the pie chart -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #fff5f9;
+      background-image: radial-gradient(circle at 15% 20%, #ffe8f0 2%, transparent 3%),
+                        radial-gradient(circle at 80% 70%, #ffd9e8 3%, transparent 4%);
+      font-family: 'Segoe UI', 'Quicksand', 'Poppins', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      color: #4a3b4a;
+    }
+
+    .main-title {
+      font-size: 2.6rem;
+      font-weight: 700;
+      color: #c94b7c;
+      margin-bottom: 1.2rem;
+      text-shadow: 2px 2px 0 #ffe2ed;
+      letter-spacing: 2px;
+      font-family: 'Quicksand', 'Segoe UI', cursive;
+      text-align: center;
+      background: rgba(255, 240, 245, 0.7);
+      padding: 0.2rem 2rem;
+      border-radius: 3rem;
+      backdrop-filter: blur(4px);
+    }
+
+    .app-container {
+      max-width: 950px;
+      width: 100%;
+      background: rgba(255, 250, 252, 0.8);
+      backdrop-filter: blur(20px);
+      background: #fffafc;
+      border-radius: 3rem;
+      box-shadow: 0 20px 40px rgba(233, 186, 205, 0.25), 0 6px 12px rgba(255, 215, 225, 0.5);
+      padding: 2rem 2rem 2.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.8rem;
+      border: 1px solid #ffe4ed;
+    }
+
+    /* top row: digital clock + pie chart */
+    .top-panel {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+    }
+
+    .clock-box {
+      background: #ffeef5;
+      padding: 1.2rem 2rem;
+      border-radius: 2.5rem;
+      box-shadow: 0 8px 18px #fbc1d4 inset, 0 4px 10px rgba(245, 175, 200, 0.4);
+      font-family: 'Quicksand', 'Segoe UI', sans-serif;
+    }
+
+    .digital-clock {
+      font-size: 2.8rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: #b3446c;
+      text-shadow: 2px 2px 0 #ffe0eb;
+      line-height: 1.2;
+    }
+
+    .pie-wrapper {
+      background: #fff0f5;
+      border-radius: 2rem;
+      padding: 0.8rem 1.2rem;
+      box-shadow: 0 10px 20px #fec7d7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 180px;
+      height: 180px;
+    }
+
+    canvas#pieChart {
+      max-width: 150px;
+      max-height: 150px;
+    }
+
+    /* center session card */
+    .center-session {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .ongoing-activity {
+      background: #ffe7f0;
+      padding: 0.8rem 2.2rem;
+      border-radius: 3rem;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #ad4d6e;
+      box-shadow: 0 6px 14px #f9c5d9;
+      text-align: center;
+      min-width: 200px;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: 0.2s;
+      border: 2px solid transparent;
+    }
+
+    .ongoing-activity:hover {
+      border-color: #f9a8c9;
+      background: #ffd9ea;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 1.8rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .btn {
+      border: none;
+      background: #ffd9e6;
+      padding: 0.7rem 1.8rem;
+      border-radius: 2.5rem;
+      font-weight: 600;
+      font-size: 1rem;
+      color: #772e4a;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: 0 5px 12px #f5b6cb;
+      background: #ffe2ed;
+      letter-spacing: 0.4px;
+      border: 1px solid #ffc1d4;
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .btn:hover {
+      background: #ffcfdf;
+      box-shadow: 0 8px 16px #f7a7c1;
+      transform: scale(1.02);
+      color: #4d2537;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+      box-shadow: 0 4px 10px #f3b1c4;
+    }
+
+    .date-control {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.2rem;
+      font-weight: 600;
+      color: #aa5470;
+    }
+
+    .date-input {
+      border: 2px solid #fbc7d9;
+      border-radius: 2rem;
+      padding: 0.5rem 1.2rem;
+      font-family: 'Quicksand', sans-serif;
+      background: #fff7fa;
+      color: #773c4f;
+      font-weight: 600;
+      outline: none;
+      font-size: 0.95rem;
+    }
+
+    .records-table {
+      background: #fff3f8;
+      border-radius: 2rem;
+      padding: 1.2rem;
+      max-height: 240px;
+      overflow-y: auto;
+      box-shadow: inset 0 2px 10px #f9d3e2;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 0.5rem 0.4rem;
+      color: #b44b6a;
+      font-weight: 700;
+      border-bottom: 2px solid #fbc0d4;
+    }
+
+    td {
+      padding: 0.45rem 0.4rem;
+      border-bottom: 1px solid #ffe0ec;
+      color: #4b3140;
+    }
+
+    .session-row {
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .session-row:hover {
+      background: #ffe8f2;
+      border-radius: 12px;
+    }
+
+    .writing-preview {
+      font-style: italic;
+      color: #b35d7c;
+    }
+
+    .footer-note {
+      font-size: 0.8rem;
+      color: #c2849b;
+      text-align: center;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    @media (max-width: 650px) {
+      .top-panel {
+        flex-direction: column;
+        align-items: center;
+      }
+      .app-container {
+        padding: 1.5rem;
+      }
+      .main-title {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="main-title">✨ All The Best !!! ✨</div>
+<div class="app-container">
+  <!-- top: clock left, pie right -->
+  <div class="top-panel">
+    <div class="clock-box">
+      <div class="digital-clock" id="liveClock">--:--</div>
+    </div>
+    <div class="pie-wrapper">
+      <canvas id="pieChart" width="150" height="150"></canvas>
+    </div>
+  </div>
+
+  <!-- center session info & buttons -->
+  <div class="center-session" id="sessionControlArea">
+    <div class="ongoing-activity" id="ongoingDisplay">✨ no active session</div>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <button class="btn" id="beginSessionBtn">🌸 begin session</button>
+      <button class="btn" id="endSessionBtn" disabled>🕊️ end session</button>
+    </div>
+    <div id="activeTimerDisplay" style="font-weight:500; color:#bc5b7c; min-height:1.5rem;"></div>
+  </div>
+
+  <!-- date navigation -->
+  <div class="date-control">
+    <button class="btn" id="prevDayBtn">◀</button>
+    <input type="date" id="datePicker" class="date-input">
+    <button class="btn" id="nextDayBtn">▶</button>
+    <button class="btn" id="todayBtn">📅 today</button>
+  </div>
+
+  <!-- records table -->
+  <div class="records-table" id="recordsContainer">
+    <table>
+      <thead> <tr><th>Session</th><th>Start</th><th>End</th><th>Duration</th><th>Notes</th></tr> </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+  <div class="footer-note">click a row or active session name to view / edit writing ✍️</div>
+</div>
+
+<!-- hidden modal for writing -->
+<div id="writingModal" style="display:none; position:fixed; top:0;left:0;width:100%;height:100%; background:rgba(255,235,240,0.8); backdrop-filter:blur(6px); align-items:center; justify-content:center; z-index:1000;">
+  <div style="background:#fff5fa; border-radius:2.5rem; padding:2rem; max-width:400px; width:90%; box-shadow:0 20px 30px #f7b6cc;">
+    <h3 style="color:#b14b6c; margin-bottom:1rem;">✏️ session writing</h3>
+    <textarea id="writingTextarea" rows="5" style="width:100%; border-radius:1.5rem; border:2px solid #fbc0d4; padding:0.8rem; font-family:inherit; background:#fff9fb;"></textarea>
+    <div style="display:flex; gap:1rem; margin-top:1.2rem; justify-content:flex-end;">
+      <button class="btn" id="saveWritingBtn">save</button>
+      <button class="btn" id="closeModalBtn">close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    // ---------- STORAGE KEYS ----------
+    const STORAGE_PREFIX = 'girly_tracker_';
+
+    // Data structure:
+    // days: { "YYYY-MM-DD": { sessions: [], activeSession: { name, startTime, writing } | null } }
+
+    // Current viewed date (string YYYY-MM-DD)
+    let currentViewDate = new Date().toISOString().split('T')[0];
+    
+    // For UI state
+    let timerInterval = null;
+    let pieChartInstance = null;
+    let selectedSessionId = null; // for writing modal (finished session)
+    let activeWritingTarget = null; // 'active' or session id
+
+    // ---------- HELPER: get today string ----------
+    function getTodayString() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    // ---------- LOAD / SAVE full data ----------
+    function loadAllData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_PREFIX + 'days');
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function saveAllData(data) {
+      localStorage.setItem(STORAGE_PREFIX + 'days', JSON.stringify(data));
+    }
+
+    function getDayData(dateStr) {
+      const all = loadAllData();
+      return all[dateStr] || { sessions: [], activeSession: null };
+    }
+
+    function setDayData(dateStr, dayData) {
+      const all = loadAllData();
+      all[dateStr] = dayData;
+      saveAllData(all);
+    }
+
+    // ---------- TIME UTILS (hours:minutes) ----------
+    function formatTime(date) {
+      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+
+    function formatDuration(minutesTotal) {
+      if (minutesTotal < 0) minutesTotal = 0;
+      const hrs = Math.floor(minutesTotal / 60);
+      const mins = Math.floor(minutesTotal % 60);
+      return `${hrs}h ${mins}m`;
+    }
+
+    function getMinutesDiff(startDate, endDate) {
+      return (endDate - startDate) / 60000;
+    }
+
+    // ---------- ACTIVE SESSION LOGIC (cross midnight) ----------
+    function checkMidnightSplit() {
+      const today = getTodayString();
+      const dayData = getDayData(today);
+      if (!dayData.activeSession) return;
+
+      const active = dayData.activeSession;
+      const start = new Date(active.startTime);
+      const now = new Date();
+      
+      const startDateStr = start.toISOString().split('T')[0];
+      if (startDateStr < today) {
+        const shouldSplit = confirm(
+          `🌙 You have an unfinished session "${active.name}" from ${startDateStr} (${formatTime(start)}).\n` +
+          `It's now ${today}.\n\n👉 Press OK to split: keep yesterday part (up to midnight) and continue today.\n👉 Cancel to discard the old session entirely.`
+        );
+        if (shouldSplit) {
+          const midnightYesterday = new Date(start);
+          midnightYesterday.setHours(23, 59, 59, 999);
+          
+          const yesterdayStr = startDateStr;
+          const yesterdayData = getDayData(yesterdayStr);
+          
+          const finishedSession = {
+            id: generateId(),
+            name: active.name,
+            startTime: active.startTime,
+            endTime: midnightYesterday.toISOString(),
+            writing: active.writing || ''
+          };
+          yesterdayData.sessions.push(finishedSession);
+          yesterdayData.activeSession = null;
+          setDayData(yesterdayStr, yesterdayData);
+
+          const midnightToday = new Date(today);
+          midnightToday.setHours(0, 0, 0, 0);
+          
+          const newActive = {
+            name: active.name,
+            startTime: midnightToday.toISOString(),
+            writing: active.writing || ''
+          };
+          dayData.activeSession = newActive;
+          setDayData(today, dayData);
+        } else {
+          dayData.activeSession = null;
+          setDayData(today, dayData);
+        }
+        refreshUI();
+      }
+    }
+
+    // ---------- BEGIN SESSION ----------
+    function beginSession() {
+      const today = getTodayString();
+      if (currentViewDate !== today) {
+        alert("🌸 You can only start a session on today's date.");
+        return;
+      }
+      const dayData = getDayData(today);
+      if (dayData.activeSession) {
+        alert('A session is already running. End it first.');
+        return;
+      }
+      const name = prompt('🌷 Name this session:', 'studying');
+      if (!name || name.trim() === '') return;
+      
+      const now = new Date().toISOString();
+      const newActive = {
+        name: name.trim(),
+        startTime: now,
+        writing: ''
+      };
+      dayData.activeSession = newActive;
+      setDayData(today, dayData);
+      refreshUI();
+    }
+
+    function endSession() {
+      const today = getTodayString();
+      if (currentViewDate !== today) {
+        alert("You can only end today's session.");
+        return;
+      }
+      const dayData = getDayData(today);
+      if (!dayData.activeSession) {
+        alert('No active session to end.');
+        return;
+      }
+      const active = dayData.activeSession;
+      const endTime = new Date().toISOString();
+      const finished = {
+        id: generateId(),
+        name: active.name,
+        startTime: active.startTime,
+        endTime: endTime,
+        writing: active.writing || ''
+      };
+      dayData.sessions.push(finished);
+      dayData.activeSession = null;
+      setDayData(today, dayData);
+      refreshUI();
+    }
+
+    function generateId() {
+      return Date.now().toString(36) + Math.random().toString(36).substr(2, 6);
+    }
+
+    // ---------- OPEN WRITING MODAL (for active session or finished) ----------
+    function openActiveWritingModal() {
+      const today = getTodayString();
+      if (currentViewDate !== today) return;
+      const dayData = getDayData(today);
+      if (!dayData.activeSession) return;
+      
+      activeWritingTarget = 'active';
+      document.getElementById('writingTextarea').value = dayData.activeSession.writing || '';
+      document.getElementById('writingModal').style.display = 'flex';
+    }
+
+    function openSessionWritingModal(session) {
+      selectedSessionId = session.id;
+      activeWritingTarget = null;
+      document.getElementById('writingTextarea').value = session.writing || '';
+      document.getElementById('writingModal').style.display = 'flex';
+    }
+
+    function closeWritingModal() {
+      document.getElementById('writingModal').style.display = 'none';
+      selectedSessionId = null;
+      activeWritingTarget = null;
+    }
+
+    function saveWriting() {
+      const newText = document.getElementById('writingTextarea').value;
+      const today = getTodayString();
+
+      if (activeWritingTarget === 'active') {
+        // save to active session of today
+        if (currentViewDate === today) {
+          const dayData = getDayData(today);
+          if (dayData.activeSession) {
+            dayData.activeSession.writing = newText;
+            setDayData(today, dayData);
+            refreshUI();
+          }
+        }
+      } else if (selectedSessionId) {
+        const dayData = getDayData(currentViewDate);
+        const session = dayData.sessions.find(s => s.id === selectedSessionId);
+        if (session) {
+          session.writing = newText;
+          setDayData(currentViewDate, dayData);
+          renderTableAndPie();
+        }
+      }
+      closeWritingModal();
+    }
+
+    // ---------- RENDER TABLE & PIE ----------
+    function renderTableAndPie() {
+      const dayData = getDayData(currentViewDate);
+      const sessions = dayData.sessions || [];
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+
+      if (sessions.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#c47b94;">✨ no sessions recorded</td></tr>`;
+      } else {
+        const sorted = [...sessions].sort((a,b) => new Date(a.startTime) - new Date(b.startTime));
+        sorted.forEach(s => {
+          const start = new Date(s.startTime);
+          const end = new Date(s.endTime);
+          const durationMin = getMinutesDiff(start, end);
+          const row = document.createElement('tr');
+          row.className = 'session-row';
+          row.setAttribute('data-session-id', s.id);
+          row.innerHTML = `
+            <td>${escapeHtml(s.name)}</td>
+            <td>${formatTime(start)}</td>
+            <td>${formatTime(end)}</td>
+            <td>${formatDuration(durationMin)}</td>
+            <td class="writing-preview">${s.writing ? '📝' : ''}</td>
+          `;
+          row.addEventListener('click', () => openSessionWritingModal(s));
+          tbody.appendChild(row);
+        });
+      }
+      updatePieChart(dayData);
+    }
+
+    function updatePieChart(dayData) {
+      const ctx = document.getElementById('pieChart').getContext('2d');
+      if (pieChartInstance) pieChartInstance.destroy();
+
+      const sessions = dayData.sessions || [];
+      const activityMinutes = {};
+      let totalRecorded = 0;
+
+      sessions.forEach(s => {
+        const min = getMinutesDiff(new Date(s.startTime), new Date(s.endTime));
+        if (min > 0) {
+          const name = s.name || 'untitled';
+          activityMinutes[name] = (activityMinutes[name] || 0) + min;
+          totalRecorded += min;
+        }
+      });
+
+      const totalDayMinutes = 24 * 60;
+      const unrecorded = Math.max(0, totalDayMinutes - totalRecorded);
+
+      const labels = [];
+      const data = [];
+      const backgroundColors = [
+        '#F9A8D4', '#FBCFE8', '#F472B6', '#F9A8D4', '#EC4899', 
+        '#FB7185', '#FCA5A5', '#FECDD3', '#FFD6E0', '#FBC4D4'
+      ];
+      
+      Object.entries(activityMinutes).forEach(([name, min], idx) => {
+        labels.push(name);
+        data.push(min);
+      });
+
+      if (unrecorded > 0) {
+        labels.push('unrecorded');
+        data.push(unrecorded);
+        backgroundColors.push('#E5E0E4');
+      }
+
+      pieChartInstance = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: backgroundColors.slice(0, labels.length),
+            borderColor: '#fffafc',
+            borderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${formatDuration(ctx.raw)}` } }
+          }
+        }
+      });
+    }
+
+    // ---------- UI REFRESH ----------
+    function refreshUI() {
+      const today = getTodayString();
+      const isToday = (currentViewDate === today);
+      const dayData = getDayData(currentViewDate);
+      
+      updateClock();
+      
+      const sessionArea = document.getElementById('sessionControlArea');
+      const beginBtn = document.getElementById('beginSessionBtn');
+      const endBtn = document.getElementById('endSessionBtn');
+      const ongoingDisplay = document.getElementById('ongoingDisplay');
+      const timerDisplay = document.getElementById('activeTimerDisplay');
+
+      if (!isToday) {
+        sessionArea.style.display = 'none';
+      } else {
+        sessionArea.style.display = 'flex';
+        const active = dayData.activeSession;
+        if (active) {
+          ongoingDisplay.textContent = `🌸 ${active.name}`;
+          ongoingDisplay.style.cursor = 'pointer';
+          beginBtn.disabled = true;
+          endBtn.disabled = false;
+          updateActiveTimerDisplay(active);
+        } else {
+          ongoingDisplay.textContent = '✨ no active session';
+          ongoingDisplay.style.cursor = 'default';
+          beginBtn.disabled = false;
+          endBtn.disabled = true;
+          timerDisplay.textContent = '';
+        }
+      }
+
+      renderTableAndPie();
+      if (isToday) checkMidnightSplit();
+    }
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('liveClock').textContent = formatTime(now);
+    }
+
+    function updateActiveTimerDisplay(active) {
+      if (!active) return;
+      const start = new Date(active.startTime);
+      const now = new Date();
+      const diffMin = getMinutesDiff(start, now);
+      document.getElementById('activeTimerDisplay').textContent = `⏳ ${formatDuration(diffMin)} elapsed`;
+    }
+
+    function startClockInterval() {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        updateClock();
+        const today = getTodayString();
+        if (currentViewDate === today) {
+          const dayData = getDayData(today);
+          if (dayData.activeSession) {
+            updateActiveTimerDisplay(dayData.activeSession);
+          }
+        }
+      }, 1000);
+    }
+
+    // ---------- DATE NAVIGATION ----------
+    function changeDate(direction) {
+      const current = new Date(currentViewDate + 'T12:00:00');
+      if (direction === 'prev') current.setDate(current.getDate() - 1);
+      else if (direction === 'next') current.setDate(current.getDate() + 1);
+      currentViewDate = current.toISOString().split('T')[0];
+      document.getElementById('datePicker').value = currentViewDate;
+      refreshUI();
+    }
+
+    function goToToday() {
+      currentViewDate = getTodayString();
+      document.getElementById('datePicker').value = currentViewDate;
+      refreshUI();
+    }
+
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>"]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        if (m === '"') return '&quot;';
+        return m;
+      });
+    }
+
+    // ---------- INITIAL SETUP ----------
+    window.addEventListener('load', () => {
+      document.getElementById('datePicker').value = currentViewDate;
+      
+      document.getElementById('beginSessionBtn').addEventListener('click', beginSession);
+      document.getElementById('endSessionBtn').addEventListener('click', endSession);
+      document.getElementById('prevDayBtn').addEventListener('click', ()=> changeDate('prev'));
+      document.getElementById('nextDayBtn').addEventListener('click', ()=> changeDate('next'));
+      document.getElementById('todayBtn').addEventListener('click', goToToday);
+      document.getElementById('datePicker').addEventListener('change', (e) => {
+        currentViewDate = e.target.value;
+        refreshUI();
+      });
+      
+      // Click on active session name to edit writing
+      document.getElementById('ongoingDisplay').addEventListener('click', (e) => {
+        const today = getTodayString();
+        if (currentViewDate !== today) return;
+        const dayData = getDayData(today);
+        if (dayData.activeSession) {
+          openActiveWritingModal();
+        }
+      });
+
+      document.getElementById('saveWritingBtn').addEventListener('click', saveWriting);
+      document.getElementById('closeModalBtn').addEventListener('click', closeWritingModal);
+      window.addEventListener('click', (e) => {
+        if (e.target === document.getElementById('writingModal')) closeWritingModal();
+      });
+
+      startClockInterval();
+      refreshUI();
+    });
+
+    window.addEventListener('beforeunload', () => {
+      if (timerInterval) clearInterval(timerInterval);
+    });
+
+  })();
+</script>
+</body>
+</html>

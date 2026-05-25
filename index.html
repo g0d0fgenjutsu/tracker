@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>🍥 soft time</title>
-  <!-- Chart.js for the pie chart -->
+  <title>🍥 soft time · </title>
+  <!-- Chart.js for the pie charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">
   </script>
   <style>
@@ -44,7 +44,7 @@
     }
 
     .app-container {
-      max-width: 950px;
+      max-width: 1000px;
       width: 100%;
       background: rgba(255, 250, 252, 0.8);
       backdrop-filter: blur(20px);
@@ -58,7 +58,7 @@
       border: 1px solid #ffe4ed;
     }
 
-    /* top row: digital clock + pie chart */
+    /* top row: digital clock + pie charts */
     .top-panel {
       display: flex;
       flex-wrap: wrap;
@@ -84,21 +84,40 @@
       line-height: 1.2;
     }
 
+    .charts-container {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
     .pie-wrapper {
       background: #fff0f5;
       border-radius: 2rem;
-      padding: 0.8rem 1.2rem;
+      padding: 1rem 1.2rem;
       box-shadow: 0 10px 20px #fec7d7;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      width: 180px;
-      height: 180px;
+      gap: 0.5rem;
     }
 
-    canvas#pieChart {
-      max-width: 150px;
-      max-height: 150px;
+    .pie-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #b35d7c;
+      margin-top: 0.2rem;
+    }
+
+    canvas#pieChart24 {
+      max-width: 200px;
+      max-height: 200px;
+    }
+
+    canvas#pieChartRecorded {
+      max-width: 200px;
+      max-height: 200px;
     }
 
     /* center session card */
@@ -246,10 +265,13 @@
       pointer-events: none;
     }
 
-    @media (max-width: 650px) {
+    @media (max-width: 750px) {
       .top-panel {
         flex-direction: column;
         align-items: center;
+      }
+      .charts-container {
+        flex-direction: column;
       }
       .app-container {
         padding: 1.5rem;
@@ -263,13 +285,20 @@
 <body>
 <div class="main-title">✨ All The Best !!! ✨</div>
 <div class="app-container">
-  <!-- top: clock left, pie right -->
+  <!-- top: clock left, pie charts right -->
   <div class="top-panel">
     <div class="clock-box">
       <div class="digital-clock" id="liveClock">--:--</div>
     </div>
-    <div class="pie-wrapper">
-      <canvas id="pieChart" width="150" height="150"></canvas>
+    <div class="charts-container">
+      <div class="pie-wrapper">
+        <canvas id="pieChart24" width="200" height="200"></canvas>
+        <div class="pie-label">🌙 24h overview</div>
+      </div>
+      <div class="pie-wrapper">
+        <canvas id="pieChartRecorded" width="200" height="200"></canvas>
+        <div class="pie-label">🌸 recorded only</div>
+      </div>
     </div>
   </div>
 
@@ -326,9 +355,10 @@
     
     // For UI state
     let timerInterval = null;
-    let pieChartInstance = null;
-    let selectedSessionId = null; // for writing modal (finished session)
-    let activeWritingTarget = null; // 'active' or session id
+    let pieChart24Instance = null;
+    let pieChartRecordedInstance = null;
+    let selectedSessionId = null;
+    let activeWritingTarget = null;
 
     // ---------- HELPER: get today string ----------
     function getTodayString() {
@@ -484,7 +514,7 @@
       return Date.now().toString(36) + Math.random().toString(36).substr(2, 6);
     }
 
-    // ---------- OPEN WRITING MODAL (for active session or finished) ----------
+    // ---------- OPEN WRITING MODAL ----------
     function openActiveWritingModal() {
       const today = getTodayString();
       if (currentViewDate !== today) return;
@@ -514,7 +544,6 @@
       const today = getTodayString();
 
       if (activeWritingTarget === 'active') {
-        // save to active session of today
         if (currentViewDate === today) {
           const dayData = getDayData(today);
           if (dayData.activeSession) {
@@ -535,7 +564,39 @@
       closeWritingModal();
     }
 
-    // ---------- RENDER TABLE & PIE ----------
+    // ---------- RENDER TABLE & PIE CHARTS ----------
+    function getActivityData(dayData) {
+      const sessions = dayData.sessions || [];
+      const activityMinutes = {};
+      let totalRecorded = 0;
+
+      // Add finished sessions
+      sessions.forEach(s => {
+        const min = getMinutesDiff(new Date(s.startTime), new Date(s.endTime));
+        if (min > 0) {
+          const name = s.name || 'untitled';
+          activityMinutes[name] = (activityMinutes[name] || 0) + min;
+          totalRecorded += min;
+        }
+      });
+
+      // Add ongoing session if viewing today
+      const today = getTodayString();
+      if (currentViewDate === today && dayData.activeSession) {
+        const active = dayData.activeSession;
+        const start = new Date(active.startTime);
+        const now = new Date();
+        const ongoingMin = getMinutesDiff(start, now);
+        if (ongoingMin > 0) {
+          const name = active.name || 'untitled';
+          activityMinutes[name] = (activityMinutes[name] || 0) + ongoingMin;
+          totalRecorded += ongoingMin;
+        }
+      }
+
+      return { activityMinutes, totalRecorded };
+    }
+
     function renderTableAndPie() {
       const dayData = getDayData(currentViewDate);
       const sessions = dayData.sessions || [];
@@ -564,54 +625,44 @@
           tbody.appendChild(row);
         });
       }
-      updatePieChart(dayData);
+      updatePieCharts(dayData);
     }
 
-    function updatePieChart(dayData) {
-      const ctx = document.getElementById('pieChart').getContext('2d');
-      if (pieChartInstance) pieChartInstance.destroy();
-
-      const sessions = dayData.sessions || [];
-      const activityMinutes = {};
-      let totalRecorded = 0;
-
-      sessions.forEach(s => {
-        const min = getMinutesDiff(new Date(s.startTime), new Date(s.endTime));
-        if (min > 0) {
-          const name = s.name || 'untitled';
-          activityMinutes[name] = (activityMinutes[name] || 0) + min;
-          totalRecorded += min;
-        }
-      });
+    function updatePieCharts(dayData) {
+      const { activityMinutes, totalRecorded } = getActivityData(dayData);
+      
+      // --- 24h Pie Chart (with unrecorded) ---
+      const ctx24 = document.getElementById('pieChart24').getContext('2d');
+      if (pieChart24Instance) pieChart24Instance.destroy();
 
       const totalDayMinutes = 24 * 60;
       const unrecorded = Math.max(0, totalDayMinutes - totalRecorded);
 
-      const labels = [];
-      const data = [];
-      const backgroundColors = [
-        '#F9A8D4', '#FBCFE8', '#F472B6', '#F9A8D4', '#EC4899', 
-        '#FB7185', '#FCA5A5', '#FECDD3', '#FFD6E0', '#FBC4D4'
+      const labels24 = [];
+      const data24 = [];
+      const bgColors24 = [
+        '#F9A8D4', '#FBCFE8', '#F472B6', '#EC4899', 
+        '#FB7185', '#FCA5A5', '#FECDD3', '#FFD6E0', '#FBC4D4', '#F9A8D4'
       ];
       
-      Object.entries(activityMinutes).forEach(([name, min], idx) => {
-        labels.push(name);
-        data.push(min);
+      Object.entries(activityMinutes).forEach(([name, min]) => {
+        labels24.push(name);
+        data24.push(min);
       });
 
       if (unrecorded > 0) {
-        labels.push('unrecorded');
-        data.push(unrecorded);
-        backgroundColors.push('#E5E0E4');
+        labels24.push('unrecorded');
+        data24.push(unrecorded);
+        bgColors24.push('#E5E0E4');
       }
 
-      pieChartInstance = new Chart(ctx, {
+      pieChart24Instance = new Chart(ctx24, {
         type: 'pie',
         data: {
-          labels: labels,
+          labels: labels24,
           datasets: [{
-            data: data,
-            backgroundColor: backgroundColors.slice(0, labels.length),
+            data: data24,
+            backgroundColor: bgColors24.slice(0, labels24.length),
             borderColor: '#fffafc',
             borderWidth: 2,
           }]
@@ -622,6 +673,54 @@
           plugins: {
             legend: { display: false },
             tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${formatDuration(ctx.raw)}` } }
+          }
+        }
+      });
+
+      // --- Recorded Only Pie Chart ---
+      const ctxRecorded = document.getElementById('pieChartRecorded').getContext('2d');
+      if (pieChartRecordedInstance) pieChartRecordedInstance.destroy();
+
+      const labelsRec = [];
+      const dataRec = [];
+      const bgColorsRec = [
+        '#F9A8D4', '#FBCFE8', '#F472B6', '#EC4899', 
+        '#FB7185', '#FCA5A5', '#FECDD3', '#FFD6E0', '#FBC4D4'
+      ];
+
+      Object.entries(activityMinutes).forEach(([name, min]) => {
+        if (min > 0) {
+          labelsRec.push(name);
+          dataRec.push(min);
+        }
+      });
+
+      if (dataRec.length === 0) {
+        labelsRec.push('no activity');
+        dataRec.push(1);
+        bgColorsRec.push('#F3E8ED');
+      }
+
+      pieChartRecordedInstance = new Chart(ctxRecorded, {
+        type: 'pie',
+        data: {
+          labels: labelsRec,
+          datasets: [{
+            data: dataRec,
+            backgroundColor: bgColorsRec.slice(0, labelsRec.length),
+            borderColor: '#fffafc',
+            borderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (ctx) => {
+              if (ctx.label === 'no activity') return 'no recorded activity';
+              return `${ctx.label}: ${formatDuration(ctx.raw)}`;
+            }}}
           }
         }
       });
@@ -688,8 +787,13 @@
           if (dayData.activeSession) {
             updateActiveTimerDisplay(dayData.activeSession);
           }
+          // Update pie charts every minute to reflect ongoing session time
+          updatePieCharts(dayData);
         }
-      }, 1000);
+      }, 60000); // Update every minute
+      
+      // Also do an immediate update for clock
+      updateClock();
     }
 
     // ---------- DATE NAVIGATION ----------
@@ -732,7 +836,6 @@
         refreshUI();
       });
       
-      // Click on active session name to edit writing
       document.getElementById('ongoingDisplay').addEventListener('click', (e) => {
         const today = getTodayString();
         if (currentViewDate !== today) return;
